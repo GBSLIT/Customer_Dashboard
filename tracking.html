@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PO Tracking</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: url('images/background.jpg') no-repeat center center fixed;
+            background-size: cover;
+        }
+        .container {
+            width: 100%;
+            max-width: 1350px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: rgba(255, 255, 255, 0.9);
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+        }
+        .header {
+            display: flex;
+            align-items: center;
+            background-color: #fbfbfb;
+            color: black;
+            padding: 35px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+        }
+        .header img {
+            height: 50px;
+            margin-right: 250px;
+        }
+        .header h1 {
+            font-size: 24px;
+            margin: 0;
+        }
+        .tracking-info {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+        .tracking-info div {
+            flex: 1 1 45%;
+            margin: 10px 0;
+        }
+        .tracking-info b {
+            font-size: 16px;
+            margin-left: 20px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        table, th, td {
+            border: 1px solid #ccc;
+        }
+        th, td {
+            padding: 10px;
+            text-align: left;
+        }
+        th {
+            background-color: #f4f4f4;
+        }
+        .visualization {
+            display: flex;
+            justify-content: space-between;
+            margin: 40px 0;
+        }
+        .step {
+            position: relative;
+            text-align: center;
+            flex: 1;
+        }
+        .step .step-dot {
+            width: 25px;
+            height: 25px;
+            border-radius: 50%;
+            background-color: #ccc;
+            margin: 0 auto;
+            position: relative;
+            z-index: 1;
+        }
+        .step .step-line {
+            position: absolute;
+            top: 12px;
+            left: 50%;
+            width: 100%;
+            height: 2px;
+            background-color: #ccc;
+            z-index: 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <img src="images/logo.png" alt="GBSL">
+            <h1>PO Tracking</h1>
+        </div>
+        <div class="tracking-info">
+            <div><b>PO Number</b> – <span id="trackingPONumber"></span></div>
+            <div><b>Customer Name</b> – <span id="trackingCustomerName"></span></div>
+            <div><b>ETD</b> – <span id="trackingETD"></span></div>
+            <div><b>Vendor Name</b> – <span id="trackingPortOfOrigin"></span></div>
+            <div><b>Country</b> – <span id="trackingPortOfDestination"></span></div>
+            <div><b>Current Stage</b> – <span id="trackingCurrentStage"></span></div>
+        </div>
+        <div class="visualization" id="visualization">
+            <!-- Steps will be populated by JavaScript -->
+        </div>
+        <table id="trackingTable">
+            <tr>
+                <th>Step</th>
+                <th>Planned Date</th>
+                <th>Actual Date</th>
+                <th>Status</th>
+                <th>Documents Link</th>
+            </tr>
+            <tr>
+                <td>Pre-Production Meeting</td>
+                <td id="ppPlannedDate"></td>
+                <td id="ppActualDate"></td>
+                <td id="ppStatus"></td>
+                <td id="ppRemark"></td>
+            </tr>
+            <tr>
+                <td>Label Artwork Approval</td>
+                <td id="laPlannedDate"></td>
+                <td id="laActualDate"></td>
+                <td id="laStatus"></td>
+                <td id="laRemark"></td>
+            </tr>
+            <tr>
+                <td>Cargo Booking submission and SO Received</td>
+                <td id="cbPlannedDate"></td>
+                <td id="cbActualDate"></td>
+                <td id="cbStatus"></td>
+                <td id="cbRemark"></td>
+            </tr>
+            <tr>
+                <td>Midline Inspection</td>
+                <td id="miPlannedDate"></td>
+                <td id="miActualDate"></td>
+                <td id="miStatus"></td>
+                <td id="miRemark"></td>
+            </tr>
+            <tr>
+                <td>Final Inspection Report Submission and Approval</td>
+                <td id="fiPlannedDate"></td>
+                <td id="fiActualDate"></td>
+                <td id="fiStatus"></td>
+                <td id="fiRemark"></td>
+            </tr>
+            <tr>
+                <td>Loading and Submission of Report</td>
+                <td id="blPlannedDate"></td>
+                <td id="blActualDate"></td>
+                <td id="blStatus"></td>
+                <td id="blRemark"></td>
+            </tr>
+            <tr>
+                <td>Payment Realization and Confirmation</td>
+                <td id="prPlannedDate"></td>
+                <td id="prActualDate"></td>
+                <td id="prStatus"></td>
+                <td id="prRemark"></td>
+            </tr>
+        </table>
+    </div>
+
+    <script>
+        const API_KEY = 'AIzaSyDIQwldr8SG1D71XI82vGycV0ueZ-cesV0';
+        const SPREADSHEET_ID = '1NwNkVa2wg2hSFreDPX9CHM2m-9gk4wZz8gj4xFDnA3E';
+        const ORDER_RANGE = 'Orders!A1:G'; // Adjust the range as per your sheet
+        const TRACKING_RANGE = 'Tracking!A1:AC'; // Adjust the range as per your sheet
+
+        // Function to fetch data from Google Sheets
+        async function fetchData(range) {
+            const response = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/${range}?key=${API_KEY}`);
+            const data = await response.json();
+            if (data.error) {
+                console.error('Error fetching data:', data.error);
+                return [];
+            }
+            return data.values;
+        }
+
+        // Function to get query parameter by name
+        function getQueryParameter(name) {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get(name);
+        }
+
+        // Function to populate tracking details
+        async function populateTrackingDetails(poNumber) {
+            const ordersData = await fetchData(ORDER_RANGE);
+            const trackingData = await fetchData(TRACKING_RANGE);
+            const poOrderData = ordersData.find(order => order[1] === poNumber);
+            const poTrackingData = trackingData.find(data => data[0] === poNumber);
+
+            if (poOrderData) {
+                document.getElementById('trackingPONumber').textContent = poOrderData[1] || ' ';
+                document.getElementById('trackingCustomerName').textContent = poOrderData[2] || ' ';
+                document.getElementById('trackingETD').textContent = poOrderData[5] || 'N/A';
+                document.getElementById('trackingPortOfOrigin').textContent = poOrderData[3] || ' ';
+                document.getElementById('trackingPortOfDestination').textContent = poOrderData[4] || ' ';
+                document.getElementById('trackingCurrentStage').textContent = poOrderData[6] || ' ';
+            } else {
+                console.error('No order data found for PO:', poNumber);
+            }
+
+            if (poTrackingData) {
+                const trackingDetails = [
+                    { id: 'ppPlannedDate', index: 1 },
+                    { id: 'ppActualDate', index: 2 },
+                    { id: 'ppStatus', index: 3 },
+                    { id: 'ppRemark', index: 4 },
+                    { id: 'laPlannedDate', index: 5 },
+                    { id: 'laActualDate', index: 6 },
+                    { id: 'laStatus', index: 7 },
+                    { id: 'laRemark', index: 8 },
+                    { id: 'cbPlannedDate', index: 9 },
+                    { id: 'cbActualDate', index: 10 },
+                    { id: 'cbStatus', index: 11 },
+                    { id: 'cbRemark', index: 12 },
+                    { id: 'miPlannedDate', index: 13 },
+                    { id: 'miActualDate', index: 14 },
+                    { id: 'miStatus', index: 15 },
+                    { id: 'miRemark', index: 16 },
+                    { id: 'fiPlannedDate', index: 17 },
+                    { id: 'fiActualDate', index: 18 },
+                    { id: 'fiStatus', index: 19 },
+                    { id: 'fiRemark', index: 20 },
+                    { id: 'blPlannedDate', index: 21 },
+                    { id: 'blActualDate', index: 22 },
+                    { id: 'blStatus', index: 23 },
+                    { id: 'blRemark', index: 24 },
+                    { id: 'prPlannedDate', index: 25 },
+                    { id: 'prActualDate', index: 26 },
+                    { id: 'prStatus', index: 27 },
+                    { id: 'prRemark', index: 28 }
+                ];
+
+                trackingDetails.forEach(detail => {
+                    const element = document.getElementById(detail.id);
+                    if (element) {
+                        element.textContent = poTrackingData[detail.index] || '';
+                    } else {
+                        console.error(`Element with id ${detail.id} not found`);
+                    }
+                });
+
+                // Update visualization
+                updateVisualization(poTrackingData.slice(1));
+            } else {
+                console.error('No tracking data found for PO:', poNumber);
+            }
+        }
+
+        // Function to update the visualization
+        function updateVisualization(trackingData) {
+            const steps = [
+                'Pre-Production Meeting',
+                'Label Artwork Approval',
+                'Midline Inspection',
+                'Cargo Booking submission and SO Received',
+                'Final Inspection Report Submission and Approval',
+                'Loading and Submission of Report',
+                'Payment Realization and Confirmation'
+            ];
+
+            const visualization = document.getElementById('visualization');
+            visualization.innerHTML = '';
+
+            steps.forEach((step, index) => {
+                const stepDiv = document.createElement('div');
+                stepDiv.classList.add('step');
+
+                const stepDot = document.createElement('div');
+                stepDot.classList.add('step-dot');
+                stepDot.style.backgroundColor = trackingData[index * 4 + 2] === 'Done' ? '#1fd655' : '#ccc';
+
+                // Add ship emoji if the step is done
+                if (trackingData[index * 4 + 2] === 'Done') {
+                    const shipEmoji = document.createElement('div');
+                    shipEmoji.textContent = '✔️';
+                    shipEmoji.style.position = 'absolute';
+                    shipEmoji.style.top = '-25px';
+                    shipEmoji.style.left = 'calc(50% - 10px)';
+                    stepDiv.appendChild(shipEmoji);
+                }
+
+                stepDiv.appendChild(stepDot);
+
+                const stepText = document.createElement('div');
+                stepText.textContent = step;
+                stepDiv.appendChild(stepText);
+
+                visualization.appendChild(stepDiv);
+
+                if (index < steps.length - 1) {
+                    const stepLine = document.createElement('div');
+                    stepLine.classList.add('step-line');
+                    stepLine.style.backgroundColor = trackingData[index * 4 + 2] === 'Done' ? '#1fd655' : '#ccc';
+                    stepDiv.appendChild(stepLine);
+                }
+            });
+        }
+
+        // Get PO number from query parameter and populate tracking details
+        const poNumber = getQueryParameter('po');
+        if (poNumber) {
+            populateTrackingDetails(poNumber);
+        } else {
+            console.error('PO number not found in URL query parameter');
+        }
+    </script>
+</body>
+</html>
