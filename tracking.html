@@ -164,6 +164,39 @@
       .tracking-info b { margin-left: 0; }
       table { min-width: 560px; }
     }
+/* Mobile header fix: stack logo and title on small screens */
+@media (max-width: 600px) {
+  .header {
+    padding: 16px;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column; /* stack logo + title */
+  }
+  .header img {
+    position: static;
+    left: auto;
+    margin: 0 auto 8px;
+    height: 42px;
+    display: block;
+  }
+  .header h1 {
+    width: auto;
+    text-align: center;
+    font-size: 20px;
+    margin: 0;
+  }
+
+  /* optional: for your stats cards two-column on mobile */
+  .stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .stats div {
+    margin: 0;
+    padding: 14px;
+  }
+}   
   </style>
 </head>
 <body>
@@ -402,3 +435,4 @@
   </script>
 </body>
 </html>
+
